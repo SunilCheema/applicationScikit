@@ -1,0 +1,131 @@
+from Tkinter import *
+import pandas as pd
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.model_selection import train_test_split
+from sklearn.ensemble import RandomForestClassifier
+from sklearn import svm
+
+
+class Gui:
+
+    def __init__(self):
+        """ all GUI components are stored within this class """
+        self.machine_learning_instance = MachineLearning()
+        self.root = Tk()
+
+        open_label = Label(self.root, text="Open:")
+        open_label.grid(row=0, column=0)
+
+        self.open_entry = Entry(self.root)
+        self.open_entry.grid(row=0, column=1)
+
+        low_label = Label(self.root, text="Low:")
+        low_label.grid(row=0,column=2)
+
+        self.low_entry = Entry(self.root)
+        self.low_entry.grid(row=0, column=3)
+
+        high_label = Label(self.root, text="High:")
+        high_label.grid(row=0, column=4)
+
+        self.high_entry = Entry(self.root)
+        self.high_entry.grid(row=0, column=5)
+
+        volume_label = Label(self.root, text="Volume:")
+        volume_label.grid(row=0, column=6)
+
+        self.volume_entry = Entry(self.root)
+        self.volume_entry.grid(row=0, column=7)
+
+        variance_label = Label(self.root, text="Variance:")
+        variance_label.grid(row=0, column=8)
+
+        self.variance_entry = Entry(self.root)
+        self.variance_entry.grid(row=0, column=9)
+
+        fit_label = Label(self.root, text="Algorithm:")
+        fit_label.grid(row=3, column=0)
+
+        fit_button = Button(self.root, text="Fit all", command=self.display_scores)
+        fit_button.grid(row=2, column=0)
+
+        knn_button = Button(self.root, text="KNN", command=lambda: self.display_predictions("knn"))
+        knn_button.grid(row=3, column=1)
+
+        svm_button = Button(self.root, text="SVM", command=lambda: self.display_predictions("svm"))
+        svm_button.grid(row=3, column=2)
+
+        rf_button = Button(self.root, text="RF", command=lambda: self.display_predictions("rf"))
+        rf_button.grid(row=3, column=3)
+
+        prediction_label = Label(self.root, text="Prediction:")
+        prediction_label.grid(row=5, column=0)
+
+        score_label = Label(self.root, text="Score:")
+        score_label.grid(row=4, column=0)
+
+        self.score_knn = Label(self.root, text="")
+        self.score_knn.grid(row=4, column=1)
+
+        self.score_svm = Label(self.root, text="")
+        self.score_svm.grid(row=4, column=2)
+
+        self.score_rf = Label(self.root, text="")
+        self.score_rf.grid(row=4, column=3)
+
+        self.output_prediction_label = Label(self.root, text="")
+        self.output_prediction_label.grid(row=5, column=1)
+
+        self.root.minsize(250, 300)
+        self.root.mainloop()
+
+    def display_predictions(self, algorithm):
+        prediction = self.machine_learning_instance.make_prediction(algorithm, self.open_entry.get(), self.low_entry.get(),
+                                                       self.high_entry.get(), self.volume_entry.get(),
+                                                       self.variance_entry.get())
+        prediction_edit = "".join(prediction)
+        print prediction_edit
+        self.output_prediction_label.config(text=prediction_edit)
+
+    def display_scores(self):
+        knn, svm, rf = self.machine_learning_instance.fit_all()
+
+        knn_score = "{0:.4f}".format(knn)
+        svm_score = "{0:.4f}".format(svm)
+        rf_score = "{0:.4f}".format(rf)
+
+        self.score_knn.config(text=knn_score)
+        self.score_svm.config(text=svm_score)
+        self.score_rf.config(text=rf_score)
+
+
+class MachineLearning:
+    """ all machine learning tasks are performed within this class """
+    def __init__(self):
+        self.knn = KNeighborsClassifier(n_neighbors=5)
+        self.rf = RandomForestClassifier(n_estimators=15)
+        self.svm = svm.SVC()
+
+        self.bitcoin_dataframe = pd.read_csv('/Users/sunilcheema/Documents/bitcoin_history.csv', index_col=0)
+        self.input_columns = self.bitcoin_dataframe[["Open", "Low", "High", "Volume", "Variance"]]
+        self.output_column = self.bitcoin_dataframe.Outcome
+        self.Xo_train, self.Xo_test, self.yo_train, self.yo_test = train_test_split(self.input_columns, self.output_column, test_size=0.2)
+
+    def fit_selected(self, algorithm):
+        getattr(self, algorithm).fit(self.Xo_train, self.yo_train)
+        accuracy = getattr(self, algorithm).score(self.Xo_test, self.yo_test)
+        return accuracy
+
+    def fit_all(self):
+        knn_accuracy = self.fit_selected("knn")
+        svm_accuracy = self.fit_selected("svm")
+        rf_accuracy = self.fit_selected("rf")
+
+        return knn_accuracy, svm_accuracy, rf_accuracy
+
+    def make_prediction(self, algorithm, open, low, high, volume, variance):
+        prediction = getattr(self, algorithm).predict([[open, low, high, volume, variance]])
+        return prediction
+
+
+Gui()
